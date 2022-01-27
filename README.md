@@ -25,7 +25,7 @@ so for me the commands are
 poetry add dbt-core
 
 # the connector is optional, you only need to install the connector that you need
-# for example I will use postgres as db in this tutorial, so I install 
+# for mart I will use postgres as db in this tutorial, so I install 
 poetry add dbt-postgres
 ```
 
@@ -91,7 +91,7 @@ config-version: 2
 profile: 'my_dbt_project'
 
 # These configurations specify where dbt should look for different types of files.
-# The `model-paths` config, for example, states that models in this project can be
+# The `model-paths` config, for mart, states that models in this project can be
 # found in the "models/" directory. You probably won't need to change these!
 model-paths: ["models"]
 analysis-paths: ["analyses"]
@@ -109,12 +109,12 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
-# In this example config, we tell dbt to build all models in the example/ directory
+# In this mart config, we tell dbt to build all models in the mart/ directory
 # as tables. These settings can be overridden in the individual model files
 # using the `{{ config(...) }}` macro.
 models:
   my_dbt_project:
-    # Config indicated by + and applies to all files under models/example/
+    # Config indicated by + and applies to all files under models/mart/
     example:
       +materialized: view
 
@@ -122,3 +122,99 @@ models:
 
 ## 4. load data
 
+### 4.1 Set up db credentials in profiles.yml
+
+To load data, you need to set up credential for connection to database server. By default, dbt stores these credentials
+in **~/.dbt/profiles.yml**. 
+
+Below is an example of the generated profiles.yml. It can contain multiple profiles(credentials). Each profile starts with the
+name, then followed by a dev and prod credentials. Note for each project you created, dbt will generate a profile for
+the project. 
+
+```yaml
+# name of the profile
+my_dbt_project:
+  outputs:
+
+    dev:
+      type: postgres
+      threads: [1 or more]
+      host: [host]
+      port: [port]
+      user: [dev_username]
+      pass: [dev_password]
+      dbname: [dbname]
+      schema: [dev_schema]
+
+    prod:
+      type: postgres
+      threads: [1 or more]
+      host: [host]
+      port: [port]
+      user: [prod_username]
+      pass: [prod_password]
+      dbname: [dbname]
+      schema: [prod_schema]
+
+  target: dev
+
+```
+
+You need to edit this file by adding the credentials. Below is an example after adding credentials
+```yaml
+config:
+  send_anonymous_usage_stats: False
+
+# note even though we have set two credential dev and prod. But as we set target is dev.
+# so only the dev credential will be used.
+local_postgres:
+  outputs:
+
+    dev:
+      type: postgres
+      threads: 1
+      host: 127.0.0.1
+      port: 5432
+      user: pliu
+      pass: changeMe
+      dbname: dbt_project
+      schema: public
+
+    prod:
+      type: postgres
+      threads: 8
+      host: 10.20.30.18
+      port: 5432
+      user: pliu
+      pass: changeMe
+      dbname: prod_dbt_project
+      schema: public
+
+  target: dev
+
+```
+
+### 4.2 Models to load data
+
+Create a folder staging in models, then creat a load_customer_csv.sql file
+
+```sql
+-- The source table will read the customer.csv 
+with source as (
+    select *
+    from {{ ref('customer') }}
+),
+-- The stage_customer table 
+stage_customer as (  
+    select customer_id,
+        zipcode,
+        city,
+        state_code,
+        datetime_created::TIMESTAMP AS datetime_created,
+        datetime_updated::TIMESTAMP AS datetime_updated,
+    from source
+)
+select *
+from stage_customer
+
+```

@@ -194,12 +194,33 @@ local_postgres:
 
 ```
 
-### 4.2 Models to load data
+### 4.2 Load static csv file
+
+dbt provides a feature called seed to upload a csv file to the database server as a table or view.
+
+You need to do 3 things:
+
+1. check if your dbt_project.yml contains the seed config. You should have below line 
+```yaml
+seed-paths: ["seeds"]
+```
+2. Create a folded called **seeds** under the parent root folder, then put your csv file under **seeds**.
+3. To upload csv file you need to run
+```shell
+# this will upload all csv inside the folder
+dbt seed
+
+# if you have multiple csv files, but you only want to load a specific csv
+dbt seed --select customers.csv
+
+```
+
+### 4.3 Models to load data
 
 Create a folder staging in models, then creat a load_customer_csv.sql file
 
 ```sql
--- The source table will read the customer.csv 
+-- The source table will read the customers.csv 
 with source as (
     select *
     from {{ ref('customer') }}

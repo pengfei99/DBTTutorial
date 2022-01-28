@@ -182,7 +182,223 @@ There are three locations you can check the generated sql queries:
 - In the target/run/ directory, you can find compiled create statements
 - In the logs/dbt.log file, you can find verbose logging of the query execution.
 
-## 6. Test 
+## 6. Test and document your table
 
- 
+Adding tests to your models helps validate that your models are working correctly. But for now dbt only supports
+four possible tests:
+- not_null: This test validates that there are no null values present in a column.
+- unique: This test validates that there are no duplicate values present in a field.
+- accepted_values: This test validates that all of the values in a column are present in a supplied list of values. 
+                 If any values other than those provided in the list are present, then the test will fail.
+- relationships: This test validates that all the records in a child table have a corresponding record in a 
+               parent table. This property is referred to as "referential integrity".
 
+For more details about test, please visit the official [doc](https://docs.getdbt.com/reference/resource-properties/tests)
+
+### 6.1 Create test suites
+
+The test suites for models in dbt must be in a yaml file, you can name it as you want. But by convention, we normally
+name it as schema.yaml.
+
+Below is an example of the test suite
+```yaml
+version: 2
+seeds:
+  - name: customers # this test if the column customer_id in customers (seed) is unique and not null
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
+models:
+  - name: stg_customers
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_orders
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+```
+
+You can notice that it has two major sections:
+- seeds: add test for seeds (csv files)
+- models: add test for models (table/view)
+
+### 6.1.1 Test seeds
+For the seeds, it's quite simple. We test if the column customer_id in customers (seed) is unique and not null
+
+```yaml
+seeds:
+  - name: customers # this test if the column customer_id in customers (seed) is unique and not null
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+```
+
+### 6.1.2 Test models
+
+To test models, we created two staging table for seeds.
+The stg_customers.sql file:
+```sql
+with stg_customers as (
+    select
+        customer_id,
+        first_name,
+        last_name
+    from {{ ref('customers') }}
+)
+
+select * from stg_customers
+```
+The stg_orders.sql file:
+```sql
+with stg_orders as (
+    select
+        order_id,
+        customer_id,
+        order_date,
+        status
+    from {{ ref('orders') }}
+)
+
+select * from stg_orders
+```
+
+#### Model test rule details:
+
+For stg_customers, We test if the column customer_id is unique and not null
+
+For stg_orders:
+- We test if the column order_id is unique and not null
+- We test if the column status only contains value in list ['placed', 'shipped', 'completed', 'return_pending', 'returned']
+- We test if the column customer_id is not null and the values have corresponding record in stg_customers.customer_id 
+```yaml
+models:
+  - name: stg_customers
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_orders
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
+      - name: customer_id
+        tests:
+          - not_null
+          - relationships:
+              to: ref('stg_customers')
+              field: customer_id
+```
+
+### 6.2 Run test
+
+To run test, you run
+```shell
+dbt test
+```
+You should see below output
+```text
+18:45:58  1 of 9 START test accepted_values_stg_orders_status__placed__shipped__completed__return_pending__returned [RUN]
+18:45:59  1 of 9 PASS accepted_values_stg_orders_status__placed__shipped__completed__return_pending__returned [PASS in 0.92s]
+18:45:59  2 of 9 START test not_null_customers_customer_id................................ [RUN]
+18:46:00  2 of 9 PASS not_null_customers_customer_id...................................... [PASS in 1.00s]
+18:46:00  3 of 9 START test not_null_stg_customers_customer_id............................ [RUN]
+18:46:01  3 of 9 PASS not_null_stg_customers_customer_id.................................. [PASS in 0.92s]
+18:46:01  4 of 9 START test not_null_stg_orders_customer_id............................... [RUN]
+18:46:02  4 of 9 PASS not_null_stg_orders_customer_id..................................... [PASS in 0.90s]
+18:46:02  5 of 9 START test not_null_stg_orders_order_id.................................. [RUN]
+18:46:03  5 of 9 PASS not_null_stg_orders_order_id........................................ [PASS in 0.98s]
+18:46:03  6 of 9 START test relationships_stg_orders_customer_id__customer_id__ref_stg_customers_ [RUN]
+18:46:04  6 of 9 PASS relationships_stg_orders_customer_id__customer_id__ref_stg_customers_ [PASS in 0.94s]
+18:46:04  7 of 9 START test unique_customers_customer_id.................................. [RUN]
+18:46:05  7 of 9 PASS unique_customers_customer_id........................................ [PASS in 0.89s]
+18:46:05  8 of 9 START test unique_stg_customers_customer_id.............................. [RUN]
+18:46:05  8 of 9 PASS unique_stg_customers_customer_id.................................... [PASS in 0.92s]
+18:46:05  9 of 9 START test unique_stg_orders_order_id.................................... [RUN]
+18:46:06  9 of 9 PASS unique_stg_orders_order_id.......................................... [PASS in 0.93s]
+18:46:06  
+18:46:06  Finished running 9 tests in 8.72s.
+18:46:06  
+18:46:06  Completed successfully
+18:46:06  
+18:46:06  Done. PASS=9 WARN=0 ERROR=0 SKIP=0 TOTAL=9
+
+```
+
+### 6.3 Add documentation
+Adding documentation to your project allows you to describe your models in rich detail, and share that information with 
+other data consumers.
+
+You can add documentation (descriptions) to each model(table/view) and column. Below is an example
+```yaml
+models:
+  - name: customers
+    description: One record per customer # add a description to the table
+    columns:
+      - name: customer_id
+        description: Primary key # add a description to column customer_id
+        tests:
+          - unique
+          - not_null
+      - name: first_order_date
+        description: NULL when a customer has not yet placed an order. # add a description to column first_order_date
+```
+
+#### 6.3.1 Generate doc
+
+Execute below code to generate the documentation for your project. dbt introspects your project and your warehouse 
+to generate a json file with rich documentation about your project.
+
+```shell
+dbt docs generate
+```
+
+After running above commands, you should see something like :
+```text
+19:18:39  Running with dbt=1.0.1
+19:18:39  Found 5 models, 11 tests, 0 snapshots, 0 analyses, 188 macros, 0 operations, 2 seed files, 0 sources, 0 exposures, 0 metrics
+19:18:39  
+19:18:40  Concurrency: 1 threads (target='dev')
+19:18:40  
+19:18:40  Done.
+19:18:40  Building catalog
+19:18:43  Catalog written to /home/pliu/git/DBTTutorial/bigquery_project/target/catalog.json
+```
+
+You can notice the output doc is a json file, and it's stored in /target folder.
+
+To view the generated doc, you can run
+```shell
+dbt docs serve
+```
+
+This command will render the generated docs in a local web page. Below figure is an example
+![dbt_generate_doc](../images/dbt_generate_doc.png)

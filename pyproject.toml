@@ -10,6 +10,7 @@ dbt-core = "^1.0.1"
 dbt-postgres = "^1.0.1"
 pyspark = "^3.2.1"
 jupyter = "^1.0.0"
+dbt-bigquery = "^1.0.0"
 
 [tool.poetry.dev-dependencies]
 

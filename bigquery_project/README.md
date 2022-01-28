@@ -1,6 +1,6 @@
 # dbt bigquery project
 
-# 1. Create a dbt project
+## 1. Create a dbt project
 
 Below command allows you to create a dbt project
 
@@ -51,7 +51,7 @@ Connection:
 
 ```
 
-# 2. Run your dbt model 
+## 2. Run your dbt model 
 
 As dbt generates some example models to allow you to create views or tables in the database, you can already load some
 data into the database server. To do so, run:
@@ -67,4 +67,33 @@ You will see below output in the terminal:
 ```
 
 You can check the gcp bigquery console, you should see you have two tables in your project now.
-![]()
+![bigquery_table_example](../images/dbt_big_query_dataset.PNG)
+
+
+## 3 Load static csv file
+
+dbt provides a feature called seed to upload a csv file to the database server as a table or view.
+
+You need to do 3 things:
+
+1. check if your dbt_project.yml contains the seed config. You should have below line 
+```yaml
+seed-paths: ["seeds"]
+```
+2. Create a folded called **seeds** under the parent root folder, then put your csv file under **seeds**.
+3. To upload csv file you need to run
+```shell
+# this will upload all csv inside the folder
+dbt seed
+
+# if you have multiple csv files, but you only want to load a specific csv
+dbt seed --select customers.csv
+
+```
+
+You should see a new table created at the bigquery server.
+
+**Important note: Pay attention of the csv file name, it can't have the same name with other models. Because they will
+all translated into tables/views. The same name will cause conflict**
+
+## 4. Use the l

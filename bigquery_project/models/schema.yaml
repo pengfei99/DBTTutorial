@@ -37,8 +37,8 @@ models:
               field: customer_id
   - name: customer_order_history
     description: >
-      In this table, we describe the purchase history of all customers. We 
-
+      In this table, we describe the purchase history of all customers. We will show the date of the first and the last
+      purchase of the customer. We will also show the total order of a customer
     columns:
       - name: customer_id
         description: the id of the customer

@@ -61,7 +61,7 @@ Normally it will generate many folders and files:
 
 ```
 
-- logs : is the folder to store the logs of dbt
+- logs : is the folder to store the logs of dbt, when you run a dbt command via CLI, it will create a logs folder.
 - my_dbt_project: is the folder to store all the information about my dbt project
     - analyses: You can store sql query for analyzing your data
     - data: You can store some data you need to load into your database

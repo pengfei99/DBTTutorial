@@ -1,10 +1,30 @@
 version: 2
 
 sources:
-  - name: data_mart
-    schema: public
-    database: dbt_project
+  - name: data_mart # name of the source
+    database: dbt_project # name of the physical database (postgres in this tutorial)
+    schema: public # schema of the tables
+    description: Data from application database, brought in by an EL process.
     tables:
-      - name: orders
       - name: customers
-      - name: states
+        description: table to describe the registered customers
+        columns:
+        - name: customer_id
+          description: primary key, id of customer
+          tests:
+            - not_null
+            - unique
+
+      - name: orders
+        description: details of custom's order
+        columns:
+        - name: order_id
+          tests:
+            - not_null
+            - unique
+        - name: customer_id
+          tests:
+            - relationships:
+                to: source('data_mart', 'customers')
+                field: customer_id
+      - name: state

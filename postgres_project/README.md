@@ -141,5 +141,71 @@ select *
 from stg_customers
 ```
 
-When you run **dbt run**, you should see new table/views are created (views in my case). Below is an example
+When you run **dbt run**, you should see new table/views are created (views in my case). Below graph is an example of
+the generated views.
+
 ![dbt_postgres_source](../images/dbt_postgres_source.png)
+
+### 3.3 Add test and documentation on sources
+
+As we showed in section 6 of [bigquery_project](../bigquery_project/README.md), we can add tests and documentations on
+models, we can also add tests and doc on sources.
+
+So we will update the source definition of section 3.1 as shown below
+
+```yaml
+version: 2
+
+sources:
+  - name: data_mart # name of the source
+    database: dbt_project # name of the physical database (postgres in this tutorial)
+    schema: public # schema of the tables
+    description: Data from application database, brought in by an EL process.
+    tables:
+      - name: customers
+        description: table to describe the registered customers
+        columns:
+        - name: customer_id 
+          description: primary key, id of customer
+          tests:
+            - not_null
+            - unique
+
+      - name: orders
+        description: details of custom's order
+        columns:
+        - name: order_id
+          tests:
+            - not_null
+            - unique
+        - name: customer_id
+          tests:
+            - relationships:
+                to: source('data_mart', 'customers')
+                field: customer_id
+      - name: state
+```
+
+We have added documentation on database, table and column. We also added tests on column (e.g. not_null, unique, etc.).
+For details about tests, please check section 6 of [bigquery_project](../bigquery_project/README.md). It's exactly the
+same.
+
+### 3.4 Run the test
+
+```shell
+dbt run
+```
+
+### 3.5 Generate doc
+```shell
+dbt docs generate
+```
+
+### 3.6 Render doc in web page
+```shell
+dbt docs serve
+```
+
+
+## 4. Add transformation 
+

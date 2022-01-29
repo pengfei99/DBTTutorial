@@ -130,7 +130,7 @@ profile: 'postgres_project'
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
-seed-paths: ["seeds"]
+seed-paths: ["data"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
@@ -181,7 +181,7 @@ You need to do 3 things:
 
 1. check if your dbt_project.yml contains the seed config. You should have below line 
 ```yaml
-seed-paths: ["seeds"]
+seed-paths: ["data"]
 ```
 2. Create a folded called **seeds** under the parent root folder, then put your csv file under **seeds**.
 3. To upload csv file you need to run

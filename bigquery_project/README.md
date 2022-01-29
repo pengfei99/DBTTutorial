@@ -1,5 +1,22 @@
 # dbt bigquery project
 
+## 0. Install dbt
+
+To install dbt, you can follow the official doc [here](https://docs.getdbt.com/dbt-cli/install/pip). As I use poetry, 
+so for me the commands are
+
+```shell
+# the dbt-core is mandatory
+poetry add dbt-core
+
+# the connector is optional, you only need to install the connector that you need
+# for this project I will use bigquery, so I install
+poetry add dbt-bigquery
+
+# If I want to use postgres as db, I will install 
+poetry add dbt-postgres
+```
+
 ## 1. Create a dbt project
 
 Below command allows you to create a dbt project
@@ -7,6 +24,8 @@ Below command allows you to create a dbt project
 ```shell
 dbt init bigquery_project
 ```
+
+### 1.1 Database connector
 
 It will prompt some question based on the database connector that you choose. Based on your answers, it will generate
 a database connector config in ~/.dbt/profiles.yaml
@@ -51,10 +70,94 @@ Connection:
 
 ```
 
+### 1.2 Project layout
+The init command also generates many folders and files:
+
+```text
+├── logs
+│ └── dbt.log
+├── my_dbt_project
+│ ├── analyses
+│ ├── data
+│ ├── dbt_project.yml
+│ ├── macros
+│ ├── models
+│    │   └── example
+│    ├── README.md
+│    ├── snapshots
+│    └── tests
+
+```
+
+logs : is the folder to store the logs of dbt, when you run a dbt command via CLI, it will create a logs folder.
+
+my_dbt_project: is the folder to store all the information about my dbt project
+- analyses: You can store sql query for analyzing your data
+- data: You can store some data you need to load into your database, deprecated, need to use seeds to store csv now 
+- dbt_project.yml: is the main configuration file of your project. We will examine it with details
+- macros: Dbt allows users to create macros, which are sql based functions. These macros can be reused across the 
+          project.
+- models: **model is the most import concept in dbt.** Model is a select statement that contains the logic of 
+          data transformation. Each model is defined in .sql files (in models directory):
+    - The name of the file is used as the model name
+    - Models can be nested in subdirectories within the models directory
+    - When you execute the dbt run command, dbt will build this model in your data warehouse by wrapping it in a 
+      create view as or create table as statement.
+
+### 1.3 The project config file
+
+As we mentioned before, **dbt_project.yml** is the project config file. It contains:
+- project name, version, config-file version
+- profile: specify which credential will be used to connect to the target database server
+- *-paths: specify where dbt should look for different types of files.
+- models: specify how the models that you defined in your project will be materialized in your database server. It 
+         could be a table or a view.
+```yaml
+
+# Name your project! Project names should contain only lowercase characters
+# and underscores. A good package name should reflect your organization's
+# name or the intended use of these models
+name: 'postgres_project'
+version: '1.0.0'
+config-version: 2
+
+# This setting configures which "profile" dbt uses for this project.
+profile: 'postgres_project'
+
+# These configurations specify where dbt should look for different types of files.
+# The `model-paths` config, for mart, states that models in this project can be
+# found in the "models/" directory. You probably won't need to change these!
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"  # directory which will store compiled SQL files
+clean-targets:         # directories to be removed by `dbt clean`
+  - "target"
+  - "dbt_packages"
+
+
+# In this mart config, we tell dbt to build all models in the mart/ directory
+# as views. These settings can be overridden in the individual model files
+# using the `{{ config(...) }}` macro.
+models:
+  bigquery_project:
+    # Config indicated by + and applies to all files under models/example/
+    # all models under example folder will be saved as view in bigquery
+    example:
+      +materialized: view
+    # all models under mart folder will be saved as table in bigquery
+    mart:
+      +materialized: table
+```
+
 ## 2. Run your dbt model 
 
-As dbt generates some example models to allow you to create views or tables in the database, you can already load some
-data into the database server. To do so, run:
+As dbt generates some example models to allow you to create views or tables in the database, you can already create some
+table/view into the database server. To do so, run:
 ```shell
 dbt run
 ```
@@ -72,7 +175,7 @@ You can check the gcp bigquery console, you should see you have two tables in yo
 
 ## 3 Load static csv file
 
-dbt provides a feature called seed to upload a csv file to the database server as a table or view.
+dbt provides a feature called **seed** to upload a csv file to the database server as a table or view.
 
 You need to do 3 things:
 
@@ -86,7 +189,8 @@ seed-paths: ["seeds"]
 # this will upload all csv inside the folder
 dbt seed
 
-# if you have multiple csv files, but you only want to load a specific csv
+# if you have multiple csv files, but you only want to load a specific csv, you can use below command. it's buggy
+# to run this command, so use it with caution
 dbt seed --select customers.csv
 
 ```

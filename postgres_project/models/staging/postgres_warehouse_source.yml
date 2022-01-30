@@ -27,4 +27,13 @@ sources:
             - relationships:
                 to: source('data_mart', 'customers')
                 field: customer_id
-      - name: state
+
+      - name: states
+        description: details of states, contain's code and name of state
+        columns:
+          - name: state_id
+            tests:
+              - not_null
+              - unique
+          - name: state_code
+          - name: state_name

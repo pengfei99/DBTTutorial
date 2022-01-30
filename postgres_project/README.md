@@ -421,7 +421,55 @@ You could notice **Snapshot tables is a clone of your source dataset, plus four 
 
 #### Step 4. Update source tables 
 
-Now we will update the orders, customers table and check the new snapshot.
+Now we will update the orders table and check the new snapshot. Suppose we have an order that has been delivered, we
+need to update the order_status from processing to shipped. 
+
+```text
+select distinct(order_status) from orders;
+ order_status 
+--------------
+ shipped
+ unavailable
+ processing
+ delivered
+ invoiced
+ canceled
+(6 rows)
+
+select * from orders where order_status='processing';
+             order_id             | customer_id | order_status | order_purchase_date | order_approved_date | order_deli_carrier_date | order_deli_customer_date | order_estimated_deli_date 
+----------------------------------+-------------+--------------+---------------------+---------------------+-------------------------+--------------------------+---------------------------
+ 15bed8e2fec7fdbadb186b57c46c92f2 |          71 | processing   | 2017-09-03 14:22:03 | 2017-09-03 14:30:09 |                         |                          | 2017-10-03 00:00:00
+ d3c8851a6651eeff2f73b0e011ac45d0 |          28 | processing   | 2016-10-05 22:44:13 | 2016-10-06 15:51:05 |                         |                          | 2016-12-09 00:00:00
+ 6a6c7d523fd59eb5bbefc007331af717 |          53 | processing   | 2017-11-24 20:09:33 | 2017-11-24 23:15:15 |                         |                          | 2017-12-20 00:00:00
+
+```
+We have three orders in processing. Suppose we want to update the order with order_id=d3c8851a6651eeff2f73b0e011ac45d0
+Run the following sql query to update the order_status
+```sql
+UPDATE orders
+SET order_status = 'shipped' 
+WHERE order_id = 'd3c8851a6651eeff2f73b0e011ac45d0';
+```
+
+Now run **dbt snapshot**, and check the newly created snapshot of orders by using
+```sql
+select * from snapshots.orders_snapshot where order_id = 'd3c8851a6651eeff2f73b0e011ac45d0';
+```
+
+You should see following output.
+
+```text
+order_id      | customer_id | order_status | order_purchase_date | order_approved_date | order_deli_carrier_date | order_deli_customer_date | order_estimated_deli_date |            dbt_scd_id            |       dbt_updated_at       |       dbt_valid_from       |        dbt_valid_to        
+----------------------------------+-------------+--------------+---------------------+---------------------+-------------------------+--------------------------+---------------------------+----------------------------------+----------------------------+----------------------------+----------------------------
+ d3c8851a6651eeff2f73b0e011ac45d0 |  28 | processing   | 2016-10-05 22:44:13 | 2016-10-06 15:51:05 |                |                       | 2016-12-09 00:00:00       | 1484aec4af28da90205b5116aa2e9a58 | 2022-01-30 04:03:55.297251 | 2022-01-30 04:03:55.297251 | 2022-01-30 08:27:56.801466
+ d3c8851a6651eeff2f73b0e011ac45d0 |  28 | shipped      | 2016-10-05 22:44:13 | 2016-10-06 15:51:05 |                |                       | 2016-12-09 00:00:00       | f07914ba91543cf3e0de9c5d2440040c | 2022-01-30 08:27:56.801466 | 2022-01-30 08:27:56.801466 | 
+
+```
+
+Note the value of column **dbt_valid_to**, for the row with order_status=processing, it has 2022-01-30 08:27:56.801466
+this means the order_status=processing is no longer valid after this time stamp. For the row with order_status=shipped,
+it's value is null, it means order_status=shipped is still valid.
 
 ## 5. Add data transformation
 

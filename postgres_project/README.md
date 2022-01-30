@@ -5,7 +5,11 @@ this tutorial, we will use postgresql as database server(data warehouse). Instea
 tables (sources) that are already inside the data warehouse.
 
 
+## 0. Setup postgresql database for this server
 
+To install a postgresql server on ubuntu, please follow this [doc](https://github.com/pengfei99/K8sCronJobPostgresBackup/blob/main/docs/Install_postgresql_server_ubuntu.md)
+
+Then you can use this [playbook](../Load_csv_to_postgres.ipynb) to upload csv to the postgresql server.
 
 ## 1 create a dbt project
 
@@ -580,5 +584,17 @@ below outputs if test passes
 ```text
 13:21:05  2 of 12 START test assert_customers_with_state_has_no_row_loss.................. [RUN]
 13:21:05  2 of 12 PASS assert_customers_with_state_has_no_row_loss........................ [PASS in 0.02s]
-
 ```
+
+## 7. Data lineage in the documentation.
+
+After you run below command:
+```shell
+dbt docs generate
+dbt docs serve
+```
+
+A web page will be opened, For each table, you can view the detailed documentation of each table. In the bottom right corner,
+you can click a button to view the table lineage. Below figure shows the **lineage of table customer_orders**
+
+![lineage_customer_orders](../images/dbt_table_lineage.png)
